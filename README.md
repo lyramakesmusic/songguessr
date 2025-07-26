@@ -1,6 +1,8 @@
 # songguessr
 song guesser on local files
 
+![screenshot of song guesser UI showing the play button, the guess dropdown, and the scoreboard in top right](songguessr.png)
+
 ### setup
 
 Clone to a folder, install flask, `python app.py`, and go to `localhost:5000`

@@ -11,7 +11,6 @@ file structure:
 ```
 songguessr/
 ├── app.py
-├── requirements.txt
 ├── songs/          (put your .mp3, .wav, .m4a, .ogg, .flac files here)
 └── templates/
     └── index.html

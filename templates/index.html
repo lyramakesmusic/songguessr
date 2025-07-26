@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SongGuessr</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+            box-sizing: border-box;
+        }
+        
+        .scoreboard {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            min-width: 150px;
+        }
+        
+        .main-score {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        
+        .guesses-count {
+            font-size: 0.6em;
+            color: rgba(255,255,255,0.8);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .average-score {
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.6);
+            text-align: center;
+        }
+        
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 100px;
+            box-sizing: border-box;
+        }
+        
+        .play-button {
+            background: #00BCD4;
+            color: white;
+            border: none;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 8px;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        
+        .play-button:hover {
+            background: #00ACC1;
+            transform: scale(1.05);
+        }
+        
+        .play-button:disabled {
+            background: #ccc;
+            transform: none;
+        }
+        
+        .answer-input {
+            width: 100%;
+            /* max-width: 600px; */
+            padding: 15px 20px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        .answer-input:focus {
+            outline: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 30px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .message.correct {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            position: fixed;
+            top: auto;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .message.incorrect {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            position: fixed;
+            top: auto;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .message.info {
+            background: rgba(33, 150, 243, 0.9);
+            color: white;
+            position: fixed;
+            top: auto;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .suggestions {
+            background: white;
+            border-radius: 15px;
+            max-height: 350px;
+            overflow-y: scroll;
+            position: absolute;
+            width: 100%;
+            top: 100%;
+            margin-top: 5px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            
+            /* Hide scrollbar but keep functionality */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* Internet Explorer 10+ */
+        }
+        
+        .suggestions::-webkit-scrollbar {
+            display: none; /* WebKit browsers */
+        }
+        
+        .suggestion {
+            padding: 15px 20px;
+            cursor: pointer;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .suggestion:hover {
+            background: #f0f0f0;
+        }
+        
+        .input-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+        
+        .snippet-length {
+            font-size: 1em;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        
+        .pulse {
+            animation: pulse 0.6s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .play-button.correct {
+            background: #4CAF50;
+            animation: checkmark 0.2s ease-in-out;
+        }
+        
+        .play-button.wrong {
+            background: #f44336;
+            animation: wrong-x 0.2s ease-in-out;
+        }
+        
+        @keyframes checkmark {
+            0% { 
+                transform: scale(1);
+                background: #4CAF50;
+            }
+            25% { 
+                transform: scale(1.2);
+                background: #2E7D32;
+            }
+            50% { 
+                transform: scale(1.1);
+                background: #4CAF50;
+            }
+            75% { 
+                transform: scale(1.05);
+                background: #66BB6A;
+            }
+            100% { 
+                transform: scale(1);
+                background: #4CAF50;
+            }
+        }
+        
+        @keyframes wrong-x {
+            0% { 
+                transform: scale(1);
+                background: #f44336;
+            }
+            25% { 
+                transform: scale(1.2);
+                background: #c62828;
+            }
+            50% { 
+                transform: scale(1.1);
+                background: #f44336;
+            }
+            75% { 
+                transform: scale(1.05);
+                background: #ef5350;
+            }
+            100% { 
+                transform: scale(1);
+                background: #00BCD4;
+            }
+        }
+    </style>
+</head>
+ <body>
+    <div class="scoreboard">
+        <div class="main-score">
+            <span id="totalScore">0</span><span class="guesses-count">/<span id="maxScore">0</span></span>
+        </div>
+        <div class="average-score">
+            avg: <span id="averageGuesses">0.0</span><br>
+            <span id="totalGuesses">0</span> guesses
+        </div>
+    </div>
+    
+    <div class="game-area">
+        <button id="playButton" class="play-button">▶</button>
+        <div id="snippetLength" class="snippet-length">0.2s</div>
+        
+        <div class="input-container">
+            <input type="text" id="answerInput" class="answer-input" 
+                   placeholder="Type your guess..." autocomplete="off">
+            <div id="suggestions" class="suggestions" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div id="message" class="message" style="display: none;"></div>
+
+    <script>
+        // game_state = {currentSong, currentPoints, totalScore, ...}
+        let gameState = {
+            currentSong: null,
+            currentPoints: 5,
+            totalScore: 0,
+            songsGuessed: 0,
+            totalGuesses: 0,
+            snippetLengths: [0.2, 0.5, 1, 2, 5],
+            currentSnippetIndex: 0,
+            songList: [],
+            audioElement: null,
+            isPlaying: false,
+            snippetStartTimes: [], // Store start times for each snippet length to prevent cheating
+            currentSnippetTimeout: null // Store timeout ID for current snippet
+        };
+
+        // DOM elements
+        const playButton = document.getElementById('playButton');
+        const answerInput = document.getElementById('answerInput');
+        const messageDiv = document.getElementById('message');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const snippetLengthDiv = document.getElementById('snippetLength');
+
+        async function loadSongList() {
+            try {
+                const response = await fetch('/songlist');
+                gameState.songList = await response.json();
+            } catch (error) {
+                console.error('Failed to load song list:', error);
+            }
+        }
+
+        async function loadNewSong() {
+            try {
+                const response = await fetch('/getsong');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showMessage('No songs available!', 'info');
+                    return;
+                }
+                
+                // current_song = {song_name, file_path} where file_path is just filename
+                gameState.currentSong = data;
+                gameState.currentPoints = 5;
+                gameState.currentSnippetIndex = 0;
+                gameState.snippetStartTimes = []; // Reset snippet start times for new song
+                
+                // Create new audio element for current song - file_path is now just filename
+                gameState.audioElement = new Audio(`/audio/${data.file_path}`);
+                
+                updateDisplay();
+                
+            } catch (error) {
+                console.error('Failed to load song:', error);
+                showMessage('Error loading song!', 'incorrect');
+            }
+        }
+
+        function playSnippet() {
+            // Don't play if showing animations or no audio element or already playing
+            if (!gameState.audioElement || gameState.isPlaying || 
+                playButton.classList.contains('correct') || playButton.classList.contains('wrong')) return;
+            
+            gameState.isPlaying = true;
+            playButton.disabled = true;
+            playButton.textContent = '⏸';
+            
+            // snippet_duration = current snippet length in seconds
+            const snippetDuration = gameState.snippetLengths[gameState.currentSnippetIndex];
+            
+            // Use consistent start time for each snippet length to prevent cheating
+            let startTime = gameState.snippetStartTimes[gameState.currentSnippetIndex];
+            if (startTime === undefined) {
+                // Generate random start time only once per snippet length
+                const audioDuration = gameState.audioElement.duration || 30;
+                const maxStartTime = Math.max(0, audioDuration - snippetDuration - 1);
+                startTime = Math.random() * maxStartTime;
+                gameState.snippetStartTimes[gameState.currentSnippetIndex] = startTime;
+            }
+            
+            gameState.audioElement.currentTime = startTime;
+            gameState.audioElement.play();
+            
+            // Stop after snippet duration
+            const stopTimeout = setTimeout(() => {
+                if (gameState.audioElement) {
+                    gameState.audioElement.pause();
+                }
+                gameState.isPlaying = false;
+                playButton.disabled = false;
+                playButton.textContent = '▶';
+            }, snippetDuration * 1000);
+            
+            // Store timeout so we can clear it if needed
+            gameState.currentSnippetTimeout = stopTimeout;
+        }
+
+        function showSuggestions(value = '') {
+            let filteredSongs;
+            
+            if (!value) {
+                // Show all songs when no input
+                filteredSongs = gameState.songList;
+            } else {
+                // filtered_songs = songs matching input text
+                filteredSongs = gameState.songList.filter(song =>
+                    song.toLowerCase().includes(value.toLowerCase())
+                );
+            }
+            
+            // Always add "I don't know" option at the top
+            const allOptions = ['I don\'t know', ...filteredSongs];
+            
+            if (allOptions.length === 1) { // Only "I don't know" option
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            suggestionsDiv.innerHTML = allOptions.map((song, index) => {
+                const escapedSong = song.replace(/'/g, "\\'"); // Escape apostrophes for onclick
+                if (index === 0) {
+                    // Special styling for "I don't know" option
+                    return `<div class="suggestion" onclick="selectSuggestion('${escapedSong}')" style="font-style: italic; color: #666; border-bottom: 1px solid #eee;">${song}</div>`;
+                } else {
+                    return `<div class="suggestion" onclick="selectSuggestion('${escapedSong}')">${song}</div>`;
+                }
+            }).join('');
+            
+            suggestionsDiv.style.display = 'block';
+            // Always scroll to top when showing dropdown
+            suggestionsDiv.scrollTop = 0;
+        }
+
+        function selectSuggestion(song) {
+            answerInput.value = song;
+            suggestionsDiv.style.display = 'none';
+            
+            if (song === "I don't know") {
+                // Handle "I don't know" as wrong guess
+                submitGuess(); // This will treat it as wrong since it won't match any real song name
+            } else {
+                submitGuess();
+            }
+        }
+
+        function submitGuess() {
+            if (!gameState.currentSong) return;
+            
+            const guess = answerInput.value.trim().toLowerCase();
+            const correctAnswer = gameState.currentSong.song_name.toLowerCase();
+            
+            // Clear input after each guess
+            answerInput.value = '';
+            suggestionsDiv.style.display = 'none';
+            
+            gameState.totalGuesses++;
+            
+            if (guess === correctAnswer) {
+                // Correct guess! Add remaining points to total score
+                gameState.totalScore += gameState.currentPoints;
+                gameState.songsGuessed++;
+                
+                // Stop any playing audio
+                if (gameState.audioElement) {
+                    gameState.audioElement.pause();
+                    gameState.audioElement.currentTime = 0;
+                }
+                gameState.isPlaying = false;
+                
+                // Clear any pending snippet timeout
+                if (gameState.currentSnippetTimeout) {
+                    clearTimeout(gameState.currentSnippetTimeout);
+                    gameState.currentSnippetTimeout = null;
+                }
+                
+                // Show checkmark animation on play button and disable it
+                playButton.classList.add('correct');
+                playButton.textContent = '✓';
+                playButton.disabled = true;
+                
+                // Pulse scoreboard on correct guess
+                document.querySelector('.scoreboard').classList.add('pulse');
+                
+                showMessage(`Correct! +${gameState.currentPoints} points`, 'correct');
+                
+                // Auto-load next song after 0.6s delay
+                setTimeout(() => {
+                    playButton.classList.remove('correct');
+                    playButton.textContent = '▶';
+                    playButton.disabled = false;
+                    document.querySelector('.scoreboard').classList.remove('pulse');
+                    loadNewSong();
+                }, 600);
+                
+            } else {
+                // Wrong guess - show red X animation
+                playButton.classList.add('wrong');
+                playButton.textContent = '✗';
+                playButton.disabled = true;
+                
+                gameState.currentPoints--;
+                
+                if (gameState.currentPoints <= 0) {
+                    // Game over for this song - stop any playing audio
+                    if (gameState.audioElement) {
+                        gameState.audioElement.pause();
+                        gameState.audioElement.currentTime = 0;
+                    }
+                    gameState.isPlaying = false;
+                    
+                    // Clear any pending snippet timeout
+                    if (gameState.currentSnippetTimeout) {
+                        clearTimeout(gameState.currentSnippetTimeout);
+                        gameState.currentSnippetTimeout = null;
+                    }
+                    
+                    showMessage(`Wrong! The song was: ${gameState.currentSong.song_name}`, 'incorrect');
+                    gameState.songsGuessed++;
+                    
+                    // Auto-load next song after 1s delay
+                    setTimeout(() => {
+                        playButton.classList.remove('wrong');
+                        playButton.textContent = '▶';
+                        playButton.disabled = false;
+                        loadNewSong();
+                    }, 1000);
+                    
+                } else {
+                    // Give longer snippet
+                    gameState.currentSnippetIndex++;
+                    if (gameState.currentSnippetIndex >= gameState.snippetLengths.length) {
+                        gameState.currentSnippetIndex = gameState.snippetLengths.length - 1;
+                        
+                        // Auto-submit when reaching final snippet length (5s)
+                        setTimeout(() => {
+                            // If no guess made, force game over
+                            if (gameState.currentPoints > 0) {
+                                // Stop any playing audio
+                                if (gameState.audioElement) {
+                                    gameState.audioElement.pause();
+                                    gameState.audioElement.currentTime = 0;
+                                }
+                                gameState.isPlaying = false;
+                                
+                                // Clear any pending snippet timeout
+                                if (gameState.currentSnippetTimeout) {
+                                    clearTimeout(gameState.currentSnippetTimeout);
+                                    gameState.currentSnippetTimeout = null;
+                                }
+                                
+                                gameState.currentPoints = 0; // Force game over
+                                showMessage(`Time's up! The song was: ${gameState.currentSong.song_name}`, 'incorrect');
+                                gameState.songsGuessed++;
+                                
+                                setTimeout(() => {
+                                    playButton.classList.remove('wrong');
+                                    playButton.textContent = '▶';
+                                    playButton.disabled = false;
+                                    loadNewSong();
+                                }, 1000);
+                            }
+                        }, 2000); // Give 2 seconds to think
+                        
+                        showMessage('Final chance with 5s snippet! Auto-submitting in 2 seconds...', 'info');
+                        
+                        // Reset button after wrong animation
+                        setTimeout(() => {
+                            playButton.classList.remove('wrong');
+                            playButton.textContent = '▶';
+                            playButton.disabled = false;
+                        }, 400);
+                        return;
+                    }
+                    
+                    // Update snippet length display with pulse and reset button
+                    const snippetLength = gameState.snippetLengths[gameState.currentSnippetIndex];
+                    snippetLengthDiv.textContent = snippetLength + 's';
+                    snippetLengthDiv.classList.remove('pulse');
+                    snippetLengthDiv.offsetHeight; // Force reflow
+                    snippetLengthDiv.classList.add('pulse');
+                    
+                    // Reset button after wrong animation
+                    setTimeout(() => {
+                        playButton.classList.remove('wrong');
+                        playButton.textContent = '▶';
+                        playButton.disabled = false;
+                    }, 400);
+                }
+            }
+            
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            // Update score with pulse animation
+            const totalScoreEl = document.getElementById('totalScore');
+            const maxScoreEl = document.getElementById('maxScore');
+            const totalGuessesEl = document.getElementById('totalGuesses');
+            const averageGuessesEl = document.getElementById('averageGuesses');
+            
+            totalScoreEl.textContent = gameState.totalScore;
+            
+            // max_possible_score = songs attempted * 5 points each
+            const maxPossibleScore = gameState.songsGuessed * 5;
+            maxScoreEl.textContent = maxPossibleScore;
+            
+            totalGuessesEl.textContent = gameState.totalGuesses;
+            
+            // average_score = total score / songs attempted (0.0-5.0 range)
+            const averageScore = gameState.songsGuessed > 0 ? 
+                (gameState.totalScore / gameState.songsGuessed).toFixed(1) : '0.0';
+            averageGuessesEl.textContent = averageScore;
+            
+            // Update snippet length with pulse animation
+            const snippetLength = gameState.snippetLengths[gameState.currentSnippetIndex];
+            snippetLengthDiv.textContent = snippetLength + 's';
+            
+            // Add pulse animations
+            [totalScoreEl, maxScoreEl, totalGuessesEl, averageGuessesEl, snippetLengthDiv].forEach(el => {
+                el.classList.remove('pulse');
+                el.offsetHeight; // Force reflow
+                el.classList.add('pulse');
+            });
+        }
+
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            
+            // Hide message after 3 seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // Event listeners
+        playButton.addEventListener('click', playSnippet);
+        
+        answerInput.addEventListener('input', (e) => {
+            showSuggestions(e.target.value);
+        });
+        
+        answerInput.addEventListener('focus', () => {
+            showSuggestions(answerInput.value);
+        });
+        
+        answerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.input-container')) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+
+        // Initialize game
+        async function initGame() {
+            await loadSongList();
+            await loadNewSong();
+        }
+
+        initGame();
+    </script>
+</body>
+</html> 
